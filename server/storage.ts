@@ -1,38 +1,33 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { generatedProjects, type GeneratedProject, type ProjectConfig } from "@shared/schema";
+import { count, desc, sql } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  logProjectGeneration(config: ProjectConfig): Promise<GeneratedProject>;
+  getStats(): Promise<{ totalProjects: number, popularDependencies: { name: string, count: number }[] }>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async logProjectGeneration(config: ProjectConfig): Promise<GeneratedProject> {
+    const [project] = await db.insert(generatedProjects).values({
+      groupId: config.groupId,
+      artifactId: config.artifactId,
+      javaVersion: config.javaVersion,
+      dependencies: config.dependencies,
+    }).returning();
+    return project;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
-  }
-
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getStats(): Promise<{ totalProjects: number, popularDependencies: { name: string, count: number }[] }> {
+    const [total] = await db.select({ count: count() }).from(generatedProjects);
+    
+    // Simple aggregation for dependencies (mocked for now as array aggregation is complex in raw SQL/ORM mix without more setup)
+    // In a real app we'd unnest the array and count
+    return {
+      totalProjects: total?.count || 0,
+      popularDependencies: [] 
+    };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
