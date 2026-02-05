@@ -211,11 +211,13 @@ class ${className}Tests {
 `;
 }
 
-function addCrudScaffolding(zip: JSZip, root: string, packageName: string) {
+function addCrudScaffolding(zip: JSZip, root: string, packageName: string, entityName: string) {
     const packagePath = packageName.replace(/\./g, "/");
+    const pascalEntity = toPascalCase(entityName);
+    const camelEntity = entityName.charAt(0).toLowerCase() + entityName.slice(1);
     
     // Entity
-    zip.file(`${root}/src/main/java/${packagePath}/entity/Item.java`, `package ${packageName}.entity;
+    zip.file(`${root}/src/main/java/${packagePath}/entity/${pascalEntity}.java`, `package ${packageName}.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -223,7 +225,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 @Entity
-public class Item {
+public class ${pascalEntity} {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -237,43 +239,76 @@ public class Item {
 `);
 
     // Repository
-    zip.file(`${root}/src/main/java/${packagePath}/repository/ItemRepository.java`, `package ${packageName}.repository;
+    zip.file(`${root}/src/main/java/${packagePath}/repository/${pascalEntity}Repository.java`, `package ${packageName}.repository;
 
-import ${packageName}.entity.Item;
+import ${packageName}.entity.${pascalEntity};
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ItemRepository extends JpaRepository<Item, Long> {
+public interface ${pascalEntity}Repository extends JpaRepository<${pascalEntity}, Long> {
 }
 `);
 
     // Controller
-    zip.file(`${root}/src/main/java/${packagePath}/controller/ItemController.java`, `package ${packageName}.controller;
+    zip.file(`${root}/src/main/java/${packagePath}/controller/${pascalEntity}Controller.java`, `package ${packageName}.controller;
 
-import ${packageName}.entity.Item;
-import ${packageName}.repository.ItemRepository;
+import ${packageName}.entity.${pascalEntity};
+import ${packageName}.repository.${pascalEntity}Repository;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/items")
-public class ItemController {
+@RequestMapping("/api/${camelEntity}s")
+public class ${pascalEntity}Controller {
 
-    private final ItemRepository repository;
+    private final ${pascalEntity}Repository repository;
 
-    public ItemController(ItemRepository repository) {
+    public ${pascalEntity}Controller(${pascalEntity}Repository repository) {
         this.repository = repository;
     }
 
     @GetMapping
-    public List<Item> getAll() {
+    public List<${pascalEntity}> getAll() {
         return repository.findAll();
     }
 
     @PostMapping
-    public Item create(@RequestBody Item item) {
-        return repository.save(item);
+    public ${pascalEntity} create(@RequestBody ${pascalEntity} ${camelEntity}) {
+        return repository.save(${camelEntity});
+    }
+}
+`);
+}
+
+function addSeedDataScaffolding(zip: JSZip, root: string, packageName: string, entityName: string) {
+    const packagePath = packageName.replace(/\./g, "/");
+    const pascalEntity = toPascalCase(entityName);
+    
+    zip.file(`${root}/src/main/java/${packagePath}/config/DataInitializer.java`, `package ${packageName}.config;
+
+import ${packageName}.entity.${pascalEntity};
+import ${packageName}.repository.${pascalEntity}Repository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DataInitializer {
+
+    @Bean
+    CommandLineRunner initDatabase(${pascalEntity}Repository repository) {
+        return args -> {
+            ${pascalEntity} item1 = new ${pascalEntity}();
+            item1.setName("Sample ${pascalEntity} 1");
+            repository.save(item1);
+
+            ${pascalEntity} item2 = new ${pascalEntity}();
+            item2.setName("Sample ${pascalEntity} 2");
+            repository.save(item2);
+            
+            System.out.println("Preloading database with ${pascalEntity} data...");
+        };
     }
 }
 `);
