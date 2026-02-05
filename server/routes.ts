@@ -48,11 +48,15 @@ export async function registerRoutes(
 
       // 5. Scaffolding (Optional Modules)
       if (config.scaffoldCrud) {
-        addCrudScaffolding(zip, root, config.packageName);
+        addCrudScaffolding(zip, root, config.packageName, config.entityName || "Item");
       }
       
       if (config.scaffoldAuth) {
          addAuthScaffolding(zip, root, config.packageName);
+      }
+
+      if (config.seedData) {
+        addSeedDataScaffolding(zip, root, config.packageName, config.entityName || "Item");
       }
 
       // Generate and send

@@ -26,7 +26,9 @@ export const projectConfigSchema = z.object({
   dependencies: z.array(z.string()).default([]),
   // Custom features
   scaffoldCrud: z.boolean().default(false),
+  entityName: z.string().optional(), // User specified entity name
   scaffoldAuth: z.boolean().default(false),
+  seedData: z.boolean().default(false), // Option for data initializer
 });
 
 export type ProjectConfig = z.infer<typeof projectConfigSchema>;
