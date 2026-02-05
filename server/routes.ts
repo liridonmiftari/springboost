@@ -292,6 +292,7 @@ import ${packageName}.repository.${pascalEntity}Repository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import java.util.List;
 
 @Configuration
 public class DataInitializer {
@@ -301,13 +302,14 @@ public class DataInitializer {
         return args -> {
             ${pascalEntity} item1 = new ${pascalEntity}();
             item1.setName("Sample ${pascalEntity} 1");
-            repository.save(item1);
-
+            
             ${pascalEntity} item2 = new ${pascalEntity}();
             item2.setName("Sample ${pascalEntity} 2");
-            repository.save(item2);
+
+            repository.saveAll(List.of(item1, item2));
             
             System.out.println("Preloading database with ${pascalEntity} data...");
+            System.out.println("User accounts: admin/password, user/password created.");
         };
     }
 }

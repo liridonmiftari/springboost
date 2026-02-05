@@ -59,7 +59,9 @@ export default function Home() {
       bootVersion: "3.2.2",
       dependencies: [],
       scaffoldCrud: false,
+      entityName: "Item",
       scaffoldAuth: false,
+      seedData: false,
     },
   });
 
@@ -258,10 +260,42 @@ export default function Home() {
                         />
                       )}
                     />
-                    <div className="grid gap-1.5 leading-none">
+                    <div className="grid gap-1.5 leading-none w-full">
                       <Label htmlFor="scaffoldCrud" className="cursor-pointer font-medium">Generate CRUD Scaffolding</Label>
                       <p className="text-sm text-muted-foreground">
                         Creates example Entity, Repository, Service, and Controller classes.
+                      </p>
+                      {form.watch("scaffoldCrud") && (
+                        <div className="mt-3 space-y-2">
+                          <Label htmlFor="entityName" className="text-xs font-semibold uppercase text-muted-foreground">Entity Name</Label>
+                          <Input 
+                            {...form.register("entityName")} 
+                            id="entityName" 
+                            placeholder="e.g. CarEntity"
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <Controller
+                      control={form.control}
+                      name="seedData"
+                      render={({ field }) => (
+                        <Checkbox 
+                          id="seedData" 
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="mt-1"
+                        />
+                      )}
+                    />
+                    <div className="grid gap-1.5 leading-none">
+                      <Label htmlFor="seedData" className="cursor-pointer font-medium">Data Initializer (Seed Data)</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Pre-populates the database with sample objects and users.
                       </p>
                     </div>
                   </div>
