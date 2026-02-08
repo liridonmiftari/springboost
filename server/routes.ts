@@ -47,8 +47,27 @@ export async function registerRoutes(
       );
 
       // 5. Scaffolding (Optional Modules)
+      // Prefer new multi-entity configuration if provided
+      const entities: CrudEntityConfig[] =
+        Array.isArray((config as any).entities) &&
+        (config as any).entities.length > 0
+          ? (config as any).entities
+          : [
+              {
+                name: config.entityName || "Item",
+                fields: [
+                  {
+                    name: "name",
+                    type: "String",
+                  },
+                ],
+              },
+            ];
+
       if (config.scaffoldCrud) {
-        addCrudScaffolding(zip, root, config.packageName, config.entityName || "Item");
+        for (const entity of entities) {
+          addCrudScaffolding(zip, root, config.packageName, entity);
+        }
       }
       
       if (config.scaffoldAuth) {
@@ -56,7 +75,7 @@ export async function registerRoutes(
       }
 
       if (config.seedData) {
-        addSeedDataScaffolding(zip, root, config.packageName, config.entityName || "Item");
+        addSeedDataScaffolding(zip, root, config.packageName, entities);
       }
 
       // Generate and send
@@ -211,32 +230,111 @@ class ${className}Tests {
 `;
 }
 
-function addCrudScaffolding(zip: JSZip, root: string, packageName: string, entityName: string) {
+type CrudFieldType =
+  | "String"
+  | "Long"
+  | "Integer"
+  | "Double"
+  | "Boolean"
+  | "LocalDate"
+  | "LocalDateTime";
+
+interface CrudEntityConfig {
+  name: string;
+  fields: { name: string; type: CrudFieldType }[];
+}
+
+function mapJavaType(type: CrudFieldType): string {
+  switch (type) {
+    case "String":
+      return "String";
+    case "Long":
+      return "Long";
+    case "Integer":
+      return "Integer";
+    case "Double":
+      return "Double";
+    case "Boolean":
+      return "Boolean";
+    case "LocalDate":
+      return "LocalDate";
+    case "LocalDateTime":
+      return "LocalDateTime";
+    default:
+      return "String";
+  }
+}
+
+function addCrudScaffolding(
+  zip: JSZip,
+  root: string,
+  packageName: string,
+  entity: CrudEntityConfig
+) {
     const packagePath = packageName.replace(/\./g, "/");
-    const pascalEntity = toPascalCase(entityName);
-    const camelEntity = entityName.charAt(0).toLowerCase() + entityName.slice(1);
+  const pascalEntity = toPascalCase(entity.name);
+  const camelEntity =
+    entity.name.charAt(0).toLowerCase() + entity.name.slice(1);
+
+  const uniqueFields =
+    entity.fields && entity.fields.length > 0
+      ? entity.fields
+      : [{ name: "name", type: "String" as CrudFieldType }];
+
+  const fieldsWithId: { name: string; type: CrudFieldType }[] = [
+    { name: "id", type: "Long" },
+    ...uniqueFields.filter((f) => f.name !== "id"),
+  ];
+
+  const needsLocalDateImport = fieldsWithId.some(
+    (f) => f.type === "LocalDate"
+  );
+  const needsLocalDateTimeImport = fieldsWithId.some(
+    (f) => f.type === "LocalDateTime"
+  );
+
+  const fieldLines = fieldsWithId
+    .map((f) => {
+      if (f.name === "id") {
+        // Primary key field with JPA annotations
+        return `    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;`;
+      }
+      return `    private ${mapJavaType(f.type)} ${f.name};`;
+    })
+    .join("\n");
+
+  const getterSetterLines = fieldsWithId
+    .map((f) => {
+      const javaType = mapJavaType(f.type);
+      const pascalField =
+        f.name.charAt(0).toUpperCase() + f.name.slice(1);
+      return `
+    public ${javaType} get${pascalField}() { return ${f.name}; }
+    public void set${pascalField}(${javaType} ${f.name}) { this.${f.name} = ${f.name}; }`;
+    })
+    .join("\n");
     
-    // Entity
-    zip.file(`${root}/src/main/java/${packagePath}/entity/${pascalEntity}.java`, `package ${packageName}.entity;
+  // Entity
+  zip.file(
+    `${root}/src/main/java/${packagePath}/entity/${pascalEntity}.java`,
+    `package ${packageName}.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-
+${needsLocalDateImport ? "import java.time.LocalDate;\n" : ""}${
+      needsLocalDateTimeImport ? "import java.time.LocalDateTime;\n" : ""
+    }
 @Entity
 public class ${pascalEntity} {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-    private String name;
-    
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
+${fieldLines}
+${getterSetterLines}
 }
-`);
+`
+  );
 
     // Repository
     zip.file(`${root}/src/main/java/${packagePath}/repository/${pascalEntity}Repository.java`, `package ${packageName}.repository;
@@ -281,39 +379,122 @@ public class ${pascalEntity}Controller {
 `);
 }
 
-function addSeedDataScaffolding(zip: JSZip, root: string, packageName: string, entityName: string) {
-    const packagePath = packageName.replace(/\./g, "/");
-    const pascalEntity = toPascalCase(entityName);
-    
-    zip.file(`${root}/src/main/java/${packagePath}/config/DataInitializer.java`, `package ${packageName}.config;
+function sampleValueForField(
+  entityName: string,
+  fieldName: string,
+  type: CrudFieldType,
+  index: number
+): string {
+  switch (type) {
+    case "String":
+      return `"Sample ${toPascalCase(entityName)} ${index} ${fieldName}"`;
+    case "Long":
+    case "Integer":
+      return `${index}`;
+    case "Double":
+      return `${index}.0`;
+    case "Boolean":
+      return index % 2 === 0 ? "true" : "false";
+    case "LocalDate":
+      return "java.time.LocalDate.now()";
+    case "LocalDateTime":
+      return "java.time.LocalDateTime.now()";
+    default:
+      return `"Sample ${toPascalCase(entityName)} ${index} ${fieldName}"`;
+  }
+}
 
-import ${packageName}.entity.${pascalEntity};
-import ${packageName}.repository.${pascalEntity}Repository;
+function addSeedDataScaffolding(
+  zip: JSZip,
+  root: string,
+  packageName: string,
+  entities: CrudEntityConfig[]
+) {
+  const packagePath = packageName.replace(/\./g, "/");
+
+  const pascalEntities = entities.map((e) => toPascalCase(e.name));
+  const repoImports = pascalEntities
+    .map(
+      (pe) =>
+        `import ${packageName}.entity.${pe};\nimport ${packageName}.repository.${pe}Repository;`
+    )
+    .join("\n");
+
+  const repoParams = pascalEntities
+    .map((pe) => {
+      const camelRepo = pe.charAt(0).toLowerCase() + pe.slice(1) + "Repository";
+      return `${pe}Repository ${camelRepo}`;
+    })
+    .join(", ");
+
+  const anyLocalDate = entities.some((e) =>
+    e.fields.some((f) => f.type === "LocalDate")
+  );
+  const anyLocalDateTime = entities.some((e) =>
+    e.fields.some((f) => f.type === "LocalDateTime")
+  );
+
+  const bodyLines = entities
+    .map((entity) => {
+      const pascalEntity = toPascalCase(entity.name);
+      const camelEntity =
+        entity.name.charAt(0).toLowerCase() + entity.name.slice(1);
+      const repoVar = camelEntity + "Repository";
+
+      const nonIdFields =
+        entity.fields && entity.fields.length > 0
+          ? entity.fields.filter((f) => f.name !== "id")
+          : [{ name: "name", type: "String" as CrudFieldType }];
+
+      const createInstances = [1, 2]
+        .map((idx) => {
+          const varName = `${camelEntity}${idx}`;
+          const fieldSets = nonIdFields
+            .map(
+              (f) =>
+                `            ${varName}.set${
+                  f.name.charAt(0).toUpperCase() + f.name.slice(1)
+                }(${sampleValueForField(entity.name, f.name, f.type, idx)});`
+            )
+            .join("\n");
+
+          return `            ${pascalEntity} ${varName} = new ${pascalEntity}();
+${fieldSets}
+`;
+        })
+        .join("\n");
+
+      return `${createInstances}
+            ${repoVar}.saveAll(java.util.List.of(${camelEntity}1, ${camelEntity}2));
+`;
+    })
+    .join("\n");
+
+  zip.file(
+    `${root}/src/main/java/${packagePath}/config/DataInitializer.java`,
+    `package ${packageName}.config;
+
+${repoImports}
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import java.util.List;
+${anyLocalDate ? "import java.time.LocalDate;\n" : ""}${
+      anyLocalDateTime ? "import java.time.LocalDateTime;\n" : ""
+    }
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(${pascalEntity}Repository repository) {
+    CommandLineRunner initDatabase(${repoParams}) {
         return args -> {
-            ${pascalEntity} item1 = new ${pascalEntity}();
-            item1.setName("Sample ${pascalEntity} 1");
-            
-            ${pascalEntity} item2 = new ${pascalEntity}();
-            item2.setName("Sample ${pascalEntity} 2");
-
-            repository.saveAll(List.of(item1, item2));
-            
-            System.out.println("Preloading database with ${pascalEntity} data...");
-            System.out.println("User accounts: admin/password, user/password created.");
+${bodyLines}
+            System.out.println("Preloading database with sample data...");
         };
     }
 }
-`);
+`
+  );
 }
 
 function addAuthScaffolding(zip: JSZip, root: string, packageName: string) {

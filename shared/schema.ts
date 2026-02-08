@@ -15,6 +15,25 @@ export const generatedProjects = pgTable("generated_projects", {
 
 // === SCHEMAS ===
 // Request schema for generating a project
+const fieldSchema = z.object({
+  name: z.string().min(1, "Field name is required"),
+  // These map to common Java types we know how to scaffold
+  type: z.enum([
+    "String",
+    "Long",
+    "Integer",
+    "Double",
+    "Boolean",
+    "LocalDate",
+    "LocalDateTime",
+  ]),
+});
+
+const entitySchema = z.object({
+  name: z.string().min(1, "Entity name is required"),
+  fields: z.array(fieldSchema).min(1, "At least one field is required"),
+});
+
 export const projectConfigSchema = z.object({
   groupId: z.string().default("com.example"),
   artifactId: z.string().default("demo"),
@@ -26,7 +45,9 @@ export const projectConfigSchema = z.object({
   dependencies: z.array(z.string()).default([]),
   // Custom features
   scaffoldCrud: z.boolean().default(false),
-  entityName: z.string().optional(), // User specified entity name
+  // Backwards-compatible: still allow a single entityName, but prefer `entities`
+  entityName: z.string().optional(), // legacy single-entity name
+  entities: z.array(entitySchema).default([]), // new multi-entity configuration
   scaffoldAuth: z.boolean().default(false),
   seedData: z.boolean().default(false), // Option for data initializer
 });

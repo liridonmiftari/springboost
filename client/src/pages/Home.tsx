@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { 
@@ -60,9 +60,25 @@ export default function Home() {
       dependencies: [],
       scaffoldCrud: false,
       entityName: "Item",
+      entities: [
+        {
+          name: "Item",
+          fields: [
+            {
+              name: "name",
+              type: "String",
+            },
+          ],
+        },
+      ],
       scaffoldAuth: false,
       seedData: false,
     },
+  });
+
+  const entitiesFieldArray = useFieldArray({
+    control: form.control,
+    name: "entities",
   });
 
   const onSubmit = (data: ProjectConfig) => {
@@ -266,14 +282,119 @@ export default function Home() {
                         Creates example Entity, Repository, Service, and Controller classes.
                       </p>
                       {form.watch("scaffoldCrud") && (
-                        <div className="mt-3 space-y-2">
-                          <Label htmlFor="entityName" className="text-xs font-semibold uppercase text-muted-foreground">Entity Name</Label>
-                          <Input 
-                            {...form.register("entityName")} 
-                            id="entityName" 
-                            placeholder="e.g. CarEntity"
-                            className="h-8 text-sm"
-                          />
+                        <div className="mt-4 space-y-4">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                              Entities & Fields
+                            </Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() =>
+                                entitiesFieldArray.append({
+                                  name: "NewEntity",
+                                  fields: [
+                                    {
+                                      name: "name",
+                                      type: "String",
+                                    },
+                                  ],
+                                })
+                              }
+                            >
+                              + Add Entity
+                            </Button>
+                          </div>
+
+                          <div className="space-y-3">
+                            {entitiesFieldArray.fields.map((field, index) => (
+                              <div
+                                key={field.id}
+                                className="rounded-md border border-border p-3 space-y-3 bg-muted/40"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    {...form.register(`entities.${index}.name` as const)}
+                                    className="h-8 text-sm"
+                                    placeholder="Entity name (e.g. Car)"
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-xs"
+                                    onClick={() =>
+                                      entitiesFieldArray.remove(index)
+                                    }
+                                  >
+                                    ×
+                                  </Button>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <Label className="text-[11px] font-medium text-muted-foreground">
+                                    Fields
+                                  </Label>
+                                  {form
+                                    .watch(`entities.${index}.fields` as const)
+                                    ?.map((_, fieldIndex) => (
+                                      <div
+                                        key={fieldIndex}
+                                        className="flex gap-2 items-center"
+                                      >
+                                        <Input
+                                          {...form.register(
+                                            `entities.${index}.fields.${fieldIndex}.name` as const
+                                          )}
+                                          placeholder="fieldName"
+                                          className="h-8 text-xs"
+                                        />
+                                        <select
+                                          className="h-8 text-xs rounded-md border border-input bg-background px-2 py-1"
+                                          {...form.register(
+                                            `entities.${index}.fields.${fieldIndex}.type` as const
+                                          )}
+                                        >
+                                          <option value="String">String</option>
+                                          <option value="Long">Long</option>
+                                          <option value="Integer">Integer</option>
+                                          <option value="Double">Double</option>
+                                          <option value="Boolean">Boolean</option>
+                                          <option value="LocalDate">LocalDate</option>
+                                          <option value="LocalDateTime">
+                                            LocalDateTime
+                                          </option>
+                                        </select>
+                                      </div>
+                                    ))}
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs mt-1"
+                                    onClick={() => {
+                                      const current =
+                                        form.getValues(
+                                          `entities.${index}.fields` as const
+                                        ) || [];
+                                      form.setValue(
+                                        `entities.${index}.fields` as const,
+                                        [
+                                          ...current,
+                                          { name: "field", type: "String" },
+                                        ],
+                                        { shouldDirty: true }
+                                      );
+                                    }}
+                                  >
+                                    + Add Field
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
