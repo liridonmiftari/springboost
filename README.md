@@ -15,7 +15,7 @@ Full‑stack Spring Boot project generator with an Express + Vite + React UI.
 This is the flow you used that works: Docker for Postgres, app on your host.
 
 ```bash
-cd /Users/liridonmiftari/Desktop/Spring-Boilerplate-Buster
+cd /Users/liridonmiftari/Desktop/Spring-Boilerplate-Buster # or whatever your directory is
 
 # 1. Start Postgres in Docker
 docker compose up -d db
