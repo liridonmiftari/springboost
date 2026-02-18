@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
@@ -57,7 +57,8 @@ export default function Home() {
       packageName: "com.example.demo",
       javaVersion: "17",
       bootVersion: "3.2.2",
-      dependencies: [],
+      // Pre-select core Spring starters and always-on dev tools (security is controlled by Add Authentication)
+      dependencies: ["web", "data-jpa", "lombok", "devtools"],
       scaffoldCrud: false,
       entityName: "Item",
       entities: [
@@ -75,6 +76,47 @@ export default function Home() {
       seedData: false,
     },
   });
+
+  // Keep name and packageName loosely in sync with artifactId by updating the "artifact" segment
+  const artifactId = form.watch("artifactId");
+  const lastArtifactRef = useRef(artifactId);
+
+  useEffect(() => {
+    const prevArtifact = lastArtifactRef.current || "demo";
+    const newArtifact = artifactId || "";
+
+    // Just store and exit if nothing meaningful changed
+    if (newArtifact === prevArtifact) {
+      return;
+    }
+
+    const currentName = form.getValues("name");
+    const currentPackage = form.getValues("packageName");
+
+    // Only auto-update when the existing values still look "derived" from the old artifact
+    // Name: old artifact equals the whole name
+    if (currentName === prevArtifact) {
+      form.setValue("name", newArtifact || prevArtifact, { shouldDirty: true });
+    }
+
+    // Package: replace only the last segment if it matches the previous artifact
+    const lastDotIndex = currentPackage.lastIndexOf(".");
+    if (lastDotIndex !== -1) {
+      const pkgPrefix = currentPackage.substring(0, lastDotIndex);
+      const pkgSuffix = currentPackage.substring(lastDotIndex + 1);
+
+      if (pkgSuffix === prevArtifact && newArtifact) {
+        form.setValue(
+          "packageName",
+          `${pkgPrefix}.${newArtifact}`,
+          { shouldDirty: true }
+        );
+      }
+    }
+
+    // Remember the latest artifact value (empty or not)
+    lastArtifactRef.current = newArtifact || "";
+  }, [artifactId, form]);
 
   const entitiesFieldArray = useFieldArray({
     control: form.control,
@@ -462,7 +504,10 @@ export default function Home() {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {AVAILABLE_DEPENDENCIES.map((dep) => (
+                    {AVAILABLE_DEPENDENCIES
+                      // Hide core starters and always-on tools that are always added by default (security is controlled via Add Authentication)
+                      .filter((dep) => !["web", "data-jpa", "lombok", "devtools"].includes(dep.id))
+                      .map((dep) => (
                       <Controller
                         key={dep.id}
                         control={form.control}

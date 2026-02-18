@@ -42,7 +42,10 @@ export const projectConfigSchema = z.object({
   packageName: z.string().default("com.example.demo"),
   javaVersion: z.enum(["17", "21"]).default("17"),
   bootVersion: z.string().default("3.2.2"),
-  dependencies: z.array(z.string()).default([]),
+  // Always include core Spring starters by default
+  dependencies: z
+    .array(z.string())
+    .default(["web", "data-jpa", "lombok", "devtools"]),
   // Custom features
   scaffoldCrud: z.boolean().default(false),
   // Backwards-compatible: still allow a single entityName, but prefer `entities`
