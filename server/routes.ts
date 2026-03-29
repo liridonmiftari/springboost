@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import type { Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { api, AVAILABLE_DEPENDENCIES } from "@shared/routes";
 import { z } from "zod";
 import JSZip from "jszip";

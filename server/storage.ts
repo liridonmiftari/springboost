@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./db.js";
 import { generatedProjects, type GeneratedProject, type ProjectConfig } from "@shared/schema";
 import { count, desc, sql } from "drizzle-orm";
 
