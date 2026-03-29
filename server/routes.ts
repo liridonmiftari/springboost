@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import type { Server } from "http";
-import { storage } from "./storage.js";
-import { api, AVAILABLE_DEPENDENCIES } from "@shared/routes";
+import { databaseMode, storage } from "./storage.js";
+import { api, AVAILABLE_DEPENDENCIES } from "../shared/routes.js";
 import { z } from "zod";
 import JSZip from "jszip";
 
@@ -9,7 +9,10 @@ export function registerRoutes(httpServer: Server, app: Express): Server {
 
   app.get(api.generator.stats.path, async (req, res) => {
     const stats = await storage.getStats();
-    res.json(stats);
+    res.json({
+      ...stats,
+      storageMode: databaseMode,
+    });
   });
 
   app.post(api.generator.create.path, async (req, res) => {

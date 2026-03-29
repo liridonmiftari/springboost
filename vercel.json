@@ -5,7 +5,7 @@
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 60,
-      "includeFiles": "server/**"
+      "includeFiles": "{server/**,shared/**}"
     }
   },
   "rewrites": [

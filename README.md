@@ -89,4 +89,20 @@ npm start
 
 The server listens on port `5000` by default (or `PORT` if set).
 
+---
+
+## Running Without A Database
+
+You can run the app without Postgres. In that mode, project generation still works and stats are kept only in memory for the lifetime of the current server instance.
+
+Use:
+
+```bash
+export DISABLE_DATABASE=true
+```
+
+Notes:
+- `Generate Project` still works normally.
+- `/api/stats` returns in-memory stats only.
+- On Vercel, this is the recommended setup unless you actually want persistent analytics.
 

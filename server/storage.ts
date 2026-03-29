@@ -1,11 +1,13 @@
 import { db } from "./db.js";
-import { generatedProjects, type GeneratedProject, type ProjectConfig } from "@shared/schema";
-import { count, desc, sql } from "drizzle-orm";
+import { generatedProjects, type GeneratedProject, type ProjectConfig } from "../shared/schema.js";
+import { count } from "drizzle-orm";
 
 export interface IStorage {
   logProjectGeneration(config: ProjectConfig): Promise<GeneratedProject>;
   getStats(): Promise<{ totalProjects: number, popularDependencies: { name: string, count: number }[] }>;
 }
+
+const databaseMode = db ? "database" : "memory";
 
 export class DatabaseStorage implements IStorage {
   async logProjectGeneration(config: ProjectConfig): Promise<GeneratedProject> {
@@ -59,3 +61,4 @@ class MemoryStorage implements IStorage {
 }
 
 export const storage: IStorage = db ? new DatabaseStorage() : new MemoryStorage();
+export { databaseMode };
