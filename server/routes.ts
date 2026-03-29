@@ -5,10 +5,7 @@ import { api, AVAILABLE_DEPENDENCIES } from "@shared/routes";
 import { z } from "zod";
 import JSZip from "jszip";
 
-export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-): Promise<Server> {
+export function registerRoutes(httpServer: Server, app: Express): Server {
 
   app.get(api.generator.stats.path, async (req, res) => {
     const stats = await storage.getStats();
